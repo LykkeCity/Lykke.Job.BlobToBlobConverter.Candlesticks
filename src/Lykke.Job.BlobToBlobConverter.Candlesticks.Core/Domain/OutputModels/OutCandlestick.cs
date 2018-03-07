@@ -17,5 +17,11 @@
         public string Start { get; set; }
 
         public string Finish { get; set; }
+
+        public override string ToString()
+        {
+            return $"{nameof(AssetPairId)},{AssetPairId},{nameof(IsAsk)},{IsAsk},{nameof(High)},{High},{nameof(Low)},{Low}"
+                + $",{nameof(Open)},{Open},{nameof(Close)},{Close},{nameof(Start)},{Start},{nameof(Finish)},{Finish}";
+        }
     }
 }

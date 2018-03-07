@@ -63,7 +63,7 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
                 }
             }
 
-            result[_mainContainer] = new List<string>(candlesDict.Values.Select(i => i.ToJson()));
+            result[_mainContainer] = new List<string>(candlesDict.Values.Select(i => i.ToString()));
 
             return result;
         }
