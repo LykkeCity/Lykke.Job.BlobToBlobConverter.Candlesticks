@@ -7,7 +7,7 @@
 
   <ItemGroup>
     <PackageReference Include="Lykke.Common" Version="4.5.0" />
-    <PackageReference Include="Lykke.Job.BlobToBlobConverter.Common" Version="3.5.0" />
+    <PackageReference Include="Lykke.Job.BlobToBlobConverter.Common" Version="4.0.0" />
     <PackageReference Include="Lykke.Job.CandlesProducer.Contract" Version="3.0.1" />
     <PackageReference Include="MessagePack" Version="1.7.3.4" />
   </ItemGroup>
