@@ -20,8 +20,7 @@
 
         public string GetValuesString()
         {
-            return $"{nameof(AssetPairId)},{AssetPairId},{nameof(IsAsk)},{IsAsk},{nameof(High)},{High},{nameof(Low)},{Low}"
-                + $",{nameof(Open)},{Open},{nameof(Close)},{Close},{nameof(Start)},{Start},{nameof(Finish)},{Finish}";
+            return $"{AssetPairId},{IsAsk},{High},{Low},{Open},{Close},{Start},{Finish}";
         }
 
         public static string GetColumnsString()
