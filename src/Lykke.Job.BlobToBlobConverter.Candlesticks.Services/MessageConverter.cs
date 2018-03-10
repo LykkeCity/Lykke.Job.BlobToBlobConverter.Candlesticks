@@ -68,6 +68,15 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
             return result;
         }
 
+        public Dictionary<string, string> GetMappingStructure()
+        {
+            var result = new Dictionary<string, string>
+            {
+                { _mainContainer, OutCandlestick.GetColumns() },
+            };
+            return result;
+        }
+
         private OutCandlestick Merge(OutCandlestick oldItem, OutCandlestick newItem)
         {
             if (newItem.High > oldItem.High)
