@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Collections.Generic;
 using MessagePack;
-using Common;
 using Common.Log;
 using Lykke.Job.CandlesProducer.Contract;
 using Lykke.Job.BlobToBlobConverter.Common.Abstractions;
@@ -63,7 +62,7 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
                 }
             }
 
-            result[_mainContainer] = new List<string>(candlesDict.Values.Select(i => i.ToString()));
+            result[_mainContainer] = new List<string>(candlesDict.Values.Select(i => i.GetValuesString()));
 
             return result;
         }
@@ -72,7 +71,7 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
         {
             var result = new Dictionary<string, string>
             {
-                { _mainContainer, OutCandlestick.GetColumns() },
+                { _mainContainer, OutCandlestick.GetColumnsString() },
             };
             return result;
         }
