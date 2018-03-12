@@ -48,8 +48,8 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Modules
                 .WithParameter("blobConnectionString", _settings.OutputBlobConnString)
                 .WithParameter("rootContainer", _settings.InputContainer);
 
-            builder.RegisterType<MessageConverter>()
-                .As<IMessageConverter>()
+            builder.RegisterType<MessageProcessor>()
+                .As<IMessageProcessor>()
                 .SingleInstance();
 
             builder.RegisterType<BlobProcessor>()

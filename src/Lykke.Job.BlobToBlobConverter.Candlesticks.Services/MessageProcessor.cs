@@ -7,28 +7,29 @@ using Lykke.Job.CandlesProducer.Contract;
 using Lykke.Job.BlobToBlobConverter.Common.Abstractions;
 using Lykke.Job.BlobToBlobConverter.Common.Helpers;
 using Lykke.Job.BlobToBlobConverter.Candlesticks.Core.Domain.OutputModels;
+using System.Threading.Tasks;
 
 namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
 {
-    public class MessageConverter : IMessageConverter
+    public class MessageProcessor : IMessageProcessor
     {
         private const string _mainContainer = "candles";
 
         private readonly ILog _log;
 
-        public MessageConverter(ILog log)
+        public MessageProcessor(ILog log)
         {
             _log = log;
         }
 
-        public Dictionary<string, List<string>> Convert(IEnumerable<byte[]> messages)
+        public async Task ProcessAsync(IEnumerable<byte[]> messages, Func<string, ICollection<string>, Task> processTask)
         {
-            var result = new Dictionary<string, List<string>>
+            var dict = new Dictionary<string, List<string>>
             {
                 { _mainContainer, new List<string>() },
             };
 
-            var candlesDict = new Dictionary<DateTime, OutCandlestick>();
+            var candlesDict = new Dictionary<string, Dictionary<DateTime, OutCandlestick>>();
 
             foreach (var message in messages)
             {
@@ -54,17 +55,34 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
                         Finish = DateTimeConverter.Convert(candle.ChangeTimestamp),
                     };
 
+                    string key = GetKey(candle);
                     var start = candle.CandleTimestamp;
-                    if (candlesDict.ContainsKey(start))
-                        candlesDict[start] = Merge(candlesDict[start], candlestick);
+                    if (candlesDict.ContainsKey(key))
+                    {
+                        var datesDict = candlesDict[key];
+                        if (datesDict.ContainsKey(start))
+                            datesDict[start] = Merge(datesDict[start], candlestick);
+                        else
+                            datesDict.Add(start, candlestick);
+                    }
                     else
-                        candlesDict.Add(start, candlestick);
+                    {
+                        var datesDict = new Dictionary<DateTime, OutCandlestick>
+                        {
+                            { start, candlestick },
+                        };
+                        candlesDict.Add(key, datesDict);
+                    }
                 }
             }
 
-            result[_mainContainer] = new List<string>(candlesDict.Values.Select(i => i.GetValuesString()));
+            dict[_mainContainer] = new List<string>(candlesDict.Values.SelectMany(i => i.Values.Select(v => v.GetValuesString())));
 
-            return result;
+            foreach (var convertedPair in dict)
+            {
+                if (convertedPair.Value.Count > 0)
+                    await processTask(convertedPair.Key, convertedPair.Value);
+            }
         }
 
         public Dictionary<string, string> GetMappingStructure()
@@ -74,6 +92,11 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
                 { _mainContainer, OutCandlestick.GetColumnsString() },
             };
             return result;
+        }
+
+        private string GetKey(CandleUpdate candle)
+        {
+            return $"{candle.AssetPairId}_{candle.PriceType}";
         }
 
         private OutCandlestick Merge(OutCandlestick oldItem, OutCandlestick newItem)
