@@ -24,11 +24,6 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
 
         public async Task ProcessAsync(IEnumerable<byte[]> messages, Func<string, ICollection<string>, Task> processTask)
         {
-            var dict = new Dictionary<string, List<string>>
-            {
-                { _mainContainer, new List<string>() },
-            };
-
             var candlesDict = new Dictionary<string, Dictionary<DateTime, OutCandlestick>>();
 
             foreach (var message in messages)
@@ -76,13 +71,12 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
                 }
             }
 
-            dict[_mainContainer] = new List<string>(candlesDict.Values.SelectMany(i => i.Values.Select(v => v.GetValuesString())));
+            var list = candlesDict.Values
+                .SelectMany(i => i.Values.Select(v => v.GetValuesString()))
+                .ToList();
 
-            foreach (var convertedPair in dict)
-            {
-                if (convertedPair.Value.Count > 0)
-                    await processTask(convertedPair.Key, convertedPair.Value);
-            }
+            if (list.Count > 0)
+                await processTask(_mainContainer, list);
         }
 
         public Dictionary<string, string> GetMappingStructure()
