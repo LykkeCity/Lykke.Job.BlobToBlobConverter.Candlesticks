@@ -6,9 +6,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Lykke.Common" Version="5.0.0" />
-    <PackageReference Include="Lykke.Job.BlobToBlobConverter.Common" Version="6.0.0" />
-    <PackageReference Include="Lykke.Job.CandlesProducer.Contract" Version="4.0.0" />
+    <PackageReference Include="Lykke.Common" Version="6.0.0" />
+    <PackageReference Include="Lykke.Job.BlobToBlobConverter.Common" Version="7.0.1" />
+    <PackageReference Include="Lykke.Job.CandlesProducer.Contract" Version="4.1.0" />
     <PackageReference Include="MessagePack" Version="1.7.3.4" />
   </ItemGroup>
 

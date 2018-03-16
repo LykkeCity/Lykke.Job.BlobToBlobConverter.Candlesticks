@@ -1,5 +1,6 @@
 ﻿using Autofac;
 using Common.Log;
+using Lykke.Common;
 using Lykke.Job.BlobToBlobConverter.Common.Abstractions;
 using Lykke.Job.BlobToBlobConverter.Common.Services;
 using Lykke.Job.BlobToBlobConverter.Candlesticks.Core.Services;
@@ -35,6 +36,8 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Modules
 
             builder.RegisterType<ShutdownManager>()
                 .As<IShutdownManager>();
+
+            builder.RegisterResourcesMonitoring(_log);
 
             builder.RegisterType<BlobReader>()
                 .As<IBlobReader>()
