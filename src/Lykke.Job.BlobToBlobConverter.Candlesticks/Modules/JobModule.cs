@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using Common.Log;
 using Lykke.Common;
+using Lykke.Job.CandlesProducer.Contract;
 using Lykke.Job.BlobToBlobConverter.Common.Abstractions;
 using Lykke.Job.BlobToBlobConverter.Common.Services;
 using Lykke.Job.BlobToBlobConverter.Candlesticks.Core.Services;
@@ -39,8 +40,8 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Modules
 
             builder.RegisterResourcesMonitoring(_log);
 
-            builder.RegisterType<BlobReader>()
-                .As<IBlobReader>()
+            builder.RegisterType<BlobReader<CandlesUpdatedEvent>>()
+                .As<IBlobReader<CandlesUpdatedEvent>>()
                 .SingleInstance()
                 .WithParameter("container", _settings.InputContainer)
                 .WithParameter("blobConnectionString", _settings.InputBlobConnString);
@@ -52,10 +53,10 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Modules
                 .WithParameter("rootContainer", _settings.InputContainer);
 
             builder.RegisterType<MessageProcessor>()
-                .As<IMessageProcessor>()
+                .As<IMessageProcessor<CandlesUpdatedEvent>>()
                 .SingleInstance();
 
-            builder.RegisterType<BlobProcessor>()
+            builder.RegisterType<BlobProcessor<CandlesUpdatedEvent>>()
                 .As<IBlobProcessor>()
                 .SingleInstance();
 

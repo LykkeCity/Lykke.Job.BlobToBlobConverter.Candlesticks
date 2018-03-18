@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
 {
-    public class MessageProcessor : IMessageProcessor
+    public class MessageProcessor : IMessageProcessor<CandlesUpdatedEvent>
     {
         private const string _mainContainer = "candles";
 
@@ -22,14 +22,35 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
             _log = log;
         }
 
-        public async Task ProcessAsync(IEnumerable<byte[]> messages, Func<string, ICollection<string>, Task> processTask)
+        public Dictionary<string, string> GetMappingStructure()
+        {
+            var result = new Dictionary<string, string>
+            {
+                { _mainContainer, OutCandlestick.GetColumnsString() },
+            };
+            return result;
+        }
+
+        public bool TryDeserialize(byte[] data, out CandlesUpdatedEvent result)
+        {
+            try
+            {
+                result = MessagePackSerializer.Deserialize<CandlesUpdatedEvent>(data);
+                return true;
+            }
+            catch (Exception)
+            {
+                result = null;
+                return false;
+            }
+        }
+
+        public async Task ProcessAsync(IEnumerable<CandlesUpdatedEvent> messages, Func<string, IEnumerable<string>, Task> processTask)
         {
             var candlesDict = new Dictionary<string, Dictionary<DateTime, OutCandlestick>>();
 
-            foreach (var message in messages)
+            foreach (var candleEvent in messages)
             {
-                var candleEvent = MessagePackSerializer.Deserialize<CandlesUpdatedEvent>(message);
-
                 foreach (var candle in candleEvent.Candles)
                 {
                     if (candle.TimeInterval != CandleTimeInterval.Minute)
@@ -77,15 +98,6 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
 
             if (list.Count > 0)
                 await processTask(_mainContainer, list);
-        }
-
-        public Dictionary<string, string> GetMappingStructure()
-        {
-            var result = new Dictionary<string, string>
-            {
-                { _mainContainer, OutCandlestick.GetColumnsString() },
-            };
-            return result;
         }
 
         private string GetKey(CandleUpdate candle)
