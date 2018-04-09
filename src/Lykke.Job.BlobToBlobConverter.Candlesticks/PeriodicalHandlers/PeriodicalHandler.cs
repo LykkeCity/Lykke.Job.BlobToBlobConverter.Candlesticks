@@ -1,15 +1,16 @@
 ﻿using System;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Common;
 using Common.Log;
 using Lykke.Job.BlobToBlobConverter.Common.Abstractions;
 
 namespace Lykke.Job.BlobToBlobConverter.Candlesticks.PeriodicalHandlers
 {
+    [UsedImplicitly]
     public class PeriodicalHandler : TimerPeriod
     {
         private readonly IBlobProcessor _blobProcessor;
-        private readonly ILog _log;
 
         public PeriodicalHandler(
             IBlobProcessor blobProcessor,
@@ -18,7 +19,6 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.PeriodicalHandlers
             : base((int)processTimeout.TotalMilliseconds, log)
         {
             _blobProcessor = blobProcessor;
-            _log = log;
         }
 
         public override async Task Execute()

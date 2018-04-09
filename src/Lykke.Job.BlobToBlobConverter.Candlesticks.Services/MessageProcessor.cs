@@ -1,19 +1,23 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using JetBrains.Annotations;
 using MessagePack;
+using Common;
 using Common.Log;
 using Lykke.Job.CandlesProducer.Contract;
 using Lykke.Job.BlobToBlobConverter.Common.Abstractions;
 using Lykke.Job.BlobToBlobConverter.Common.Helpers;
 using Lykke.Job.BlobToBlobConverter.Candlesticks.Core.Domain.OutputModels;
-using System.Threading.Tasks;
 
 namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
 {
+    [UsedImplicitly]
     public class MessageProcessor : IMessageProcessor<CandlesUpdatedEvent>
     {
         private const string _mainContainer = "candles";
+        private const int _maxStringFieldsLength = 255;
 
         private readonly ILog _log;
 
@@ -51,6 +55,9 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
 
             foreach (var candleEvent in messages)
             {
+                if (!IsValid(candleEvent))
+                    _log.WriteWarning(nameof(MessageProcessor), nameof(Convert), $"CandleEvent {candleEvent.ToJson()} is invalid!");
+                
                 foreach (var candle in candleEvent.Candles)
                 {
                     if (candle.TimeInterval != CandleTimeInterval.Minute)
@@ -122,6 +129,14 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
                 oldItem.Start = newItem.Start;
             }
             return oldItem;
+        }
+
+        private static bool IsValid(CandlesUpdatedEvent candleEvent)
+        {
+            return candleEvent.Candles.All(c =>
+                !string.IsNullOrWhiteSpace(c.AssetPairId) && c.AssetPairId.Length <= _maxStringFieldsLength
+                && c.High >= c.Low
+                && c.CandleTimestamp <= c.ChangeTimestamp);
         }
     }
 }
