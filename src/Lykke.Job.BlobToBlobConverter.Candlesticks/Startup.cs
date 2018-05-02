@@ -12,6 +12,7 @@ using Lykke.Job.BlobToBlobConverter.Candlesticks.Settings;
 using Lykke.Job.BlobToBlobConverter.Candlesticks.Modules;
 using Lykke.Logs;
 using Lykke.Logs.Slack;
+using Lykke.MonitoringServiceApiCaller;
 using Lykke.SettingsReader;
 using Lykke.SlackNotification.AzureQueue;
 using Microsoft.AspNetCore.Builder;
@@ -23,6 +24,8 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks
 {
     public class Startup
     {
+        private string _monitoringServiceUrl;
+
         public IHostingEnvironment Environment { get; }
         public IContainer ApplicationContainer { get; private set; }
         public IConfigurationRoot Configuration { get; }
@@ -56,6 +59,7 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks
 
                 var builder = new ContainerBuilder();
                 var appSettings = Configuration.LoadSettings<AppSettings>();
+                _monitoringServiceUrl = appSettings.CurrentValue.MonitoringServiceClient.MonitoringServiceUrl;
 
                 Log = CreateLogWithSlack(services, appSettings);
 
@@ -117,6 +121,8 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks
 
                 await ApplicationContainer.Resolve<IStartupManager>().StartAsync();
                 await Log.WriteMonitorAsync("", Program.EnvInfo, "Started");
+
+                await AutoRegistrationInMonitoring.RegisterAsync(Configuration, _monitoringServiceUrl, Log);
             }
             catch (Exception ex)
             {
