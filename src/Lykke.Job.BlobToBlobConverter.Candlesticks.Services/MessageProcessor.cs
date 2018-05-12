@@ -14,12 +14,14 @@ using Lykke.Job.BlobToBlobConverter.Candlesticks.Core.Domain.OutputModels;
 namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
 {
     [UsedImplicitly]
-    public class MessageProcessor : IMessageProcessor<CandlesUpdatedEvent>
+    public class MessageProcessor : IMessageProcessor
     {
         private const string _mainContainer = "candles";
         private const int _maxStringFieldsLength = 255;
 
         private readonly ILog _log;
+
+        private Dictionary<string, Dictionary<DateTime, OutCandlestick>> _candlesDict;
 
         public MessageProcessor(ILog log)
         {
@@ -35,7 +37,34 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
             return result;
         }
 
-        public bool TryDeserialize(byte[] data, out CandlesUpdatedEvent result)
+        public void StartBlobProcessing()
+        {
+            _candlesDict = new Dictionary<string, Dictionary<DateTime, OutCandlestick>>();
+        }
+
+        public async Task FinishBlobProcessingAsync(Func<string, List<string>, Task> messagesHandler)
+        {
+            var list = _candlesDict.Values
+                .SelectMany(i => i.Values.Select(v => v.GetValuesString()))
+                .ToList();
+
+            if (list.Count > 0)
+                await messagesHandler(_mainContainer, list);
+        }
+
+        public bool TryProcessMessage(byte[] data)
+        {
+            CandlesUpdatedEvent candlesEvent;
+            var result = TryDeserialize(data, out candlesEvent);
+            if (!result)
+                return false;
+
+            ProcessCandles(candlesEvent);
+
+            return true;
+        }
+
+        private bool TryDeserialize(byte[] data, out CandlesUpdatedEvent result)
         {
             try
             {
@@ -49,62 +78,50 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
             }
         }
 
-        public async Task ProcessAsync(IEnumerable<CandlesUpdatedEvent> messages, Func<string, IEnumerable<string>, Task> processTask)
+        public void ProcessCandles(CandlesUpdatedEvent candleEvent)
         {
-            var candlesDict = new Dictionary<string, Dictionary<DateTime, OutCandlestick>>();
+            if (!IsValid(candleEvent))
+                _log.WriteWarning(nameof(MessageProcessor), nameof(Convert), $"CandleEvent {candleEvent.ToJson()} is invalid!");
 
-            foreach (var candleEvent in messages)
+            foreach (var candle in candleEvent.Candles)
             {
-                if (!IsValid(candleEvent))
-                    _log.WriteWarning(nameof(MessageProcessor), nameof(Convert), $"CandleEvent {candleEvent.ToJson()} is invalid!");
-                
-                foreach (var candle in candleEvent.Candles)
+                if (candle.TimeInterval != CandleTimeInterval.Minute)
+                    continue;
+
+                if (candle.PriceType != CandlePriceType.Ask && candle.PriceType != CandlePriceType.Bid)
+                    continue;
+
+                var candlestick = new OutCandlestick
                 {
-                    if (candle.TimeInterval != CandleTimeInterval.Minute)
-                        continue;
+                    AssetPairId = candle.AssetPairId,
+                    IsAsk = candle.PriceType == CandlePriceType.Ask,
+                    High = (decimal)candle.High,
+                    Low = (decimal)candle.Low,
+                    Open = (decimal)candle.Open,
+                    Close = (decimal)candle.Close,
+                    Start = DateTimeConverter.Convert(candle.CandleTimestamp),
+                    Finish = DateTimeConverter.Convert(candle.ChangeTimestamp),
+                };
 
-                    if (candle.PriceType != CandlePriceType.Ask && candle.PriceType != CandlePriceType.Bid)
-                        continue;
-
-                    var candlestick = new OutCandlestick
-                    {
-                        AssetPairId = candle.AssetPairId,
-                        IsAsk = candle.PriceType == CandlePriceType.Ask,
-                        High = (decimal)candle.High,
-                        Low = (decimal)candle.Low,
-                        Open = (decimal)candle.Open,
-                        Close = (decimal)candle.Close,
-                        Start = DateTimeConverter.Convert(candle.CandleTimestamp),
-                        Finish = DateTimeConverter.Convert(candle.ChangeTimestamp),
-                    };
-
-                    string key = GetKey(candle);
-                    var start = candle.CandleTimestamp;
-                    if (candlesDict.ContainsKey(key))
-                    {
-                        var datesDict = candlesDict[key];
-                        if (datesDict.ContainsKey(start))
-                            datesDict[start] = Merge(datesDict[start], candlestick);
-                        else
-                            datesDict.Add(start, candlestick);
-                    }
+                string key = GetKey(candle);
+                var start = candle.CandleTimestamp;
+                if (_candlesDict.ContainsKey(key))
+                {
+                    var datesDict = _candlesDict[key];
+                    if (datesDict.ContainsKey(start))
+                        datesDict[start] = Merge(datesDict[start], candlestick);
                     else
+                        datesDict.Add(start, candlestick);
+                }
+                else
+                {
+                    var datesDict = new Dictionary<DateTime, OutCandlestick>
                     {
-                        var datesDict = new Dictionary<DateTime, OutCandlestick>
-                        {
-                            { start, candlestick },
-                        };
-                        candlesDict.Add(key, datesDict);
-                    }
+                        { start, candlestick },
+                    };
+                    _candlesDict.Add(key, datesDict);
                 }
             }
-
-            var list = candlesDict.Values
-                .SelectMany(i => i.Values.Select(v => v.GetValuesString()))
-                .ToList();
-
-            if (list.Count > 0)
-                await processTask(_mainContainer, list);
         }
 
         private string GetKey(CandleUpdate candle)
