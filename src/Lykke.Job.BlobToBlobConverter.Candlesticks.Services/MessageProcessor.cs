@@ -3,7 +3,6 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using MessagePack;
 using Common;
 using Common.Log;
 using Lykke.Job.CandlesProducer.Contract;
@@ -18,10 +17,12 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
     {
         private const string _mainContainer = "candles";
         private const int _maxStringFieldsLength = 255;
+        private const int _maxBatchCount = 500000;
 
         private readonly ILog _log;
 
         private Dictionary<string, Dictionary<DateTime, OutCandlestick>> _candlesDict;
+        private Func<string, List<string>, Task> _messagesHandler;
 
         public MessageProcessor(ILog log)
         {
@@ -37,52 +38,58 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
             return result;
         }
 
-        public void StartBlobProcessing()
+        public void StartBlobProcessing(Func<string, List<string>, Task> messagesHandler)
         {
             _candlesDict = new Dictionary<string, Dictionary<DateTime, OutCandlestick>>();
+            _messagesHandler = messagesHandler;
         }
 
-        public async Task FinishBlobProcessingAsync(Func<string, List<string>, Task> messagesHandler)
+        public async Task FinishBlobProcessingAsync()
         {
-            var list = _candlesDict.Values
-                .SelectMany(i => i.Values.Select(v => v.GetValuesString()))
-                .ToList();
-
-            if (list.Count > 0)
-                await messagesHandler(_mainContainer, list);
+            await SaveAndClearCandlesAsync(true);
         }
 
-        public bool TryProcessMessage(byte[] data)
+        public async Task<bool> TryProcessMessageAsync(byte[] data)
         {
-            CandlesUpdatedEvent candlesEvent;
-            var result = TryDeserialize(data, out candlesEvent);
+            var result = MessagePackDeserializer.TryDeserialize(data, out CandlesUpdatedEvent candlesEvent);
             if (!result)
                 return false;
 
+            if (!IsValid(candlesEvent))
+                _log.WriteWarning(nameof(TryProcessMessageAsync), nameof(Convert), $"CandleEvent {candlesEvent.ToJson()} is invalid!");
+
             ProcessCandles(candlesEvent);
+
+            if (_candlesDict.Sum(i => i.Value.Count) >= _maxBatchCount)
+                await SaveAndClearCandlesAsync(false);
 
             return true;
         }
 
-        private bool TryDeserialize(byte[] data, out CandlesUpdatedEvent result)
+        private async Task SaveAndClearCandlesAsync(bool saveAll)
         {
-            try
+            var list = new List<string>();
+            foreach (var pairCandlesDict in _candlesDict.Values)
             {
-                result = MessagePackSerializer.Deserialize<CandlesUpdatedEvent>(data);
-                return true;
+                var keys = pairCandlesDict.Keys.OrderBy(i => i).ToList();
+                int maxCount = saveAll ? keys.Count : keys.Count - 1;
+                for (int i = 0; i < maxCount; i++)
+                {
+                    list.Add(pairCandlesDict[keys[i]].GetValuesString());
+                    if (!saveAll)
+                        pairCandlesDict.Remove(keys[i]);
+                }
             }
-            catch (Exception)
-            {
-                result = null;
-                return false;
-            }
+
+            if (saveAll)
+                _candlesDict.Clear();
+
+            if (list.Count > 0)
+                await _messagesHandler(_mainContainer, list);
         }
 
         public void ProcessCandles(CandlesUpdatedEvent candleEvent)
         {
-            if (!IsValid(candleEvent))
-                _log.WriteWarning(nameof(MessageProcessor), nameof(Convert), $"CandleEvent {candleEvent.ToJson()} is invalid!");
-
             foreach (var candle in candleEvent.Candles)
             {
                 if (candle.TimeInterval != CandleTimeInterval.Minute)
