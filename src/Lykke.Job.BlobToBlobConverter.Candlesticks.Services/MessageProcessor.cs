@@ -15,7 +15,6 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
     [UsedImplicitly]
     public class MessageProcessor : IMessageProcessor
     {
-        private const string _mainContainer = "candles";
         private const int _maxStringFieldsLength = 255;
         private const int _maxBatchCount = 500000;
 
@@ -27,15 +26,6 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
         public MessageProcessor(ILog log)
         {
             _log = log;
-        }
-
-        public Dictionary<string, string> GetMappingStructure()
-        {
-            var result = new Dictionary<string, string>
-            {
-                { _mainContainer, OutCandlestick.GetColumnsString() },
-            };
-            return result;
         }
 
         public void StartBlobProcessing(Func<string, List<string>, Task> messagesHandler)
@@ -85,7 +75,7 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
                 _candlesDict.Clear();
 
             if (list.Count > 0)
-                await _messagesHandler(_mainContainer, list);
+                await _messagesHandler(StructureBuilder.MainContainer, list);
         }
 
         public void ProcessCandles(CandlesUpdatedEvent candleEvent)

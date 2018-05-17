@@ -1,4 +1,7 @@
-﻿namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Core.Domain.OutputModels
+﻿using System;
+using System.Collections.Generic;
+
+namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Core.Domain.OutputModels
 {
     public class OutCandlestick
     {
@@ -27,6 +30,21 @@
         {
             return $"{nameof(AssetPairId)},{nameof(IsAsk)},{nameof(High)},{nameof(Low)}"
                 + $",{nameof(Open)},{nameof(Close)},{nameof(Start)},{nameof(Finish)}";
+        }
+
+        public static List<(string, string)> GetStructure()
+        {
+            return new List<(string, string)>
+            {
+                (nameof(AssetPairId), typeof(string).Name),
+                (nameof(IsAsk), typeof(bool).Name),
+                (nameof(High), typeof(decimal).Name),
+                (nameof(Low), typeof(decimal).Name),
+                (nameof(Open), typeof(decimal).Name),
+                (nameof(Close), typeof(decimal).Name),
+                (nameof(Start), typeof(DateTime).Name),
+                (nameof(Finish), typeof(DateTime).Name),
+            };
         }
     }
 }
