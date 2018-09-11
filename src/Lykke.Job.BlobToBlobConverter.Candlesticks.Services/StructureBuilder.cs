@@ -1,8 +1,8 @@
 ﻿using System.Linq;
 using System.Collections.Generic;
-using Lykke.Job.BlobToBlobConverter.Common.Abstractions;
 using Lykke.Job.BlobToBlobConverter.Candlesticks.Core.Domain.OutputModels;
 using Lykke.Job.BlobToBlobConverter.Common;
+using Lykke.Job.BlobToBlobConverter.Common.Abstractions;
 
 namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
 {
@@ -10,13 +10,11 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
     {
         internal static string MainContainer => "candles";
 
-        public Dictionary<string, string> GetMappingStructure()
+        public bool IsDynamicStructure => false;
+
+        public bool IsAllBlobsReprocessingRequired(TablesStructure currentStructure)
         {
-            var result = new Dictionary<string, string>
-            {
-                { MainContainer, OutCandlestick.GetColumnsString() },
-            };
-            return result;
+            return false;
         }
 
         public TablesStructure GetTablesStructure()

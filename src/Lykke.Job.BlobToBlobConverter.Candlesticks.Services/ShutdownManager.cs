@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 using Common;
+using JetBrains.Annotations;
 using Lykke.Job.BlobToBlobConverter.Candlesticks.Core.Services;
 
 namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
@@ -11,19 +11,16 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
     {
         private readonly List<IStopable> _items = new List<IStopable>();
 
-        public void Register(IStopable stopable)
+        public ShutdownManager(IEnumerable<IStartStop> stopables)
         {
-            _items.Add(stopable);
+            _items.AddRange(stopables);
         }
 
-        public async Task StopAsync()
+        public Task StopAsync()
         {
-            foreach (var item in _items)
-            {
-                item.Stop();
-            }
+            Parallel.ForEach(_items, i => i.Stop());
 
-            await Task.CompletedTask;
+            return Task.CompletedTask;
         }
     }
 }

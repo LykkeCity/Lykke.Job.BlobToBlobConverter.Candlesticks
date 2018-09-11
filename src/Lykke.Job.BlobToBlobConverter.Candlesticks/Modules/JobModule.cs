@@ -4,9 +4,9 @@ using Lykke.Common;
 using Lykke.Job.BlobToBlobConverter.Common.Abstractions;
 using Lykke.Job.BlobToBlobConverter.Common.Services;
 using Lykke.Job.BlobToBlobConverter.Candlesticks.Core.Services;
-using Lykke.Job.BlobToBlobConverter.Candlesticks.Settings;
-using Lykke.Job.BlobToBlobConverter.Candlesticks.Services;
 using Lykke.Job.BlobToBlobConverter.Candlesticks.PeriodicalHandlers;
+using Lykke.Job.BlobToBlobConverter.Candlesticks.Services;
+using Lykke.Job.BlobToBlobConverter.Candlesticks.Settings;
 
 namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Modules
 {
@@ -32,10 +32,13 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Modules
                 .SingleInstance();
 
             builder.RegisterType<StartupManager>()
-                .As<IStartupManager>();
+                .As<IStartupManager>()
+                .SingleInstance();
 
             builder.RegisterType<ShutdownManager>()
-                .As<IShutdownManager>();
+                .As<IShutdownManager>()
+                .AutoActivate()
+                .SingleInstance();
 
             builder.RegisterResourcesMonitoring(_log);
 
@@ -64,8 +67,7 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Modules
                 .SingleInstance();
 
             builder.RegisterType<PeriodicalHandler>()
-                .As<IStartable>()
-                .AutoActivate()
+                .As<IStartStop>()
                 .SingleInstance()
                 .WithParameter(TypedParameter.From(_settings.BlobScanPeriod));
         }

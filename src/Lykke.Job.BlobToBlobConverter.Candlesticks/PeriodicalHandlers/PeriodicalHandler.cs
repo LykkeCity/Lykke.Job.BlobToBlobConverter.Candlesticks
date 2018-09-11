@@ -1,14 +1,15 @@
 ﻿using System;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 using Common;
 using Common.Log;
+using JetBrains.Annotations;
+using Lykke.Job.BlobToBlobConverter.Candlesticks.Core.Services;
 using Lykke.Job.BlobToBlobConverter.Common.Abstractions;
 
 namespace Lykke.Job.BlobToBlobConverter.Candlesticks.PeriodicalHandlers
 {
     [UsedImplicitly]
-    public class PeriodicalHandler : TimerPeriod
+    public class PeriodicalHandler : TimerPeriod, IStartStop
     {
         private readonly IBlobProcessor _blobProcessor;
 

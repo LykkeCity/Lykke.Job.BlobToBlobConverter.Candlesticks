@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
+using Autofac;
 using JetBrains.Annotations;
 using Lykke.Job.BlobToBlobConverter.Candlesticks.Core.Services;
 
@@ -7,11 +9,21 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
     [UsedImplicitly]
     public class StartupManager : IStartupManager
     {
-        public async Task StartAsync()
-        {
-            // TODO: Implement your startup logic here. Good idea is to log every step
+        private readonly List<IStartable> _startables = new List<IStartable>();
 
-            await Task.CompletedTask;
+        public StartupManager(IEnumerable<IStartStop> startables)
+        {
+            _startables.AddRange(startables);
+        }
+
+        public Task StartAsync()
+        {
+            foreach (var startable in _startables)
+            {
+                startable.Start();
+            }
+
+            return Task.CompletedTask;
         }
     }
 }
