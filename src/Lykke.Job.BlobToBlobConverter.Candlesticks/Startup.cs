@@ -4,6 +4,7 @@ using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using AzureStorage.Tables;
 using Common.Log;
+using Lykke.Common;
 using Lykke.Common.ApiLibrary.Middleware;
 using Lykke.Common.ApiLibrary.Swagger;
 using Lykke.Common.Api.Contract.Responses;
@@ -58,7 +59,12 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks
                 });
 
                 var builder = new ContainerBuilder();
-                var appSettings = Configuration.LoadSettings<AppSettings>();
+                var appSettings = Configuration.LoadSettings<AppSettings>(o =>
+                {
+                    o.SetConnString(s => s.SlackNotifications.AzureQueue.ConnectionString);
+                    o.SetQueueName(s => s.SlackNotifications.AzureQueue.QueueName);
+                    o.SenderName = $"{AppEnvironment.Name} {AppEnvironment.Version}";
+                });
                 _monitoringServiceUrl = appSettings.CurrentValue.MonitoringServiceClient.MonitoringServiceUrl;
 
                 Log = CreateLogWithSlack(services, appSettings);
@@ -104,7 +110,7 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks
 
                 appLifetime.ApplicationStarted.Register(() => StartApplication().GetAwaiter().GetResult());
                 appLifetime.ApplicationStopping.Register(() => StopApplication().GetAwaiter().GetResult());
-                appLifetime.ApplicationStopped.Register(() => CleanUp().GetAwaiter().GetResult());
+                appLifetime.ApplicationStopped.Register(CleanUp);
             }
             catch (Exception ex)
             {
@@ -120,13 +126,15 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks
                 // NOTE: Job not yet recieve and process IsAlive requests here
 
                 await ApplicationContainer.Resolve<IStartupManager>().StartAsync();
-                await Log.WriteMonitorAsync("", Program.EnvInfo, "Started");
+                Log.WriteMonitor("", Program.EnvInfo, "Started");
 
+#if !DEBUG
                 await AutoRegistrationInMonitoring.RegisterAsync(Configuration, _monitoringServiceUrl, Log);
+#endif
             }
             catch (Exception ex)
             {
-                await Log.WriteFatalErrorAsync(nameof(Startup), nameof(StartApplication), "", ex);
+                Log.WriteFatalError(nameof(Startup), nameof(StartApplication), ex);
                 throw;
             }
         }
@@ -141,32 +149,24 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks
             }
             catch (Exception ex)
             {
-                if (Log != null)
-                {
-                    await Log.WriteFatalErrorAsync(nameof(Startup), nameof(StopApplication), "", ex);
-                }
+                Log?.WriteFatalError(nameof(Startup), nameof(StopApplication), ex);
                 throw;
             }
         }
 
-        private async Task CleanUp()
+        private void CleanUp()
         {
             try
             {
-                // NOTE: Job can't recieve and process IsAlive requests here, so you can destroy all resources
-                
-                if (Log != null)
-                {
-                    await Log.WriteMonitorAsync("", Program.EnvInfo, "Terminating");
-                }
-                
+                Log?.WriteMonitor("", Program.EnvInfo, "Terminating");
+
                 ApplicationContainer.Dispose();
             }
             catch (Exception ex)
             {
                 if (Log != null)
                 {
-                    await Log.WriteFatalErrorAsync(nameof(Startup), nameof(CleanUp), "", ex);
+                    Log.WriteFatalError(nameof(Startup), nameof(CleanUp), ex);
                     (Log as IDisposable)?.Dispose();
                 }
                 throw;
@@ -185,7 +185,7 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks
 
             if (string.IsNullOrEmpty(dbLogConnectionString))
             {
-                consoleLogger.WriteWarningAsync(nameof(Startup), nameof(CreateLogWithSlack), "Table loggger is not inited").Wait();
+                consoleLogger.WriteWarning(nameof(Startup), nameof(CreateLogWithSlack), "Table loggger is not inited");
                 return aggregateLogger;
             }
 

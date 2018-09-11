@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using Lykke.Common;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.PlatformAbstractions;
 
@@ -12,7 +13,7 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks
 
         public static async Task Main(string[] args)
         {
-            Console.WriteLine($"{PlatformServices.Default.Application.ApplicationName} version {PlatformServices.Default.Application.ApplicationVersion}");
+            Console.WriteLine($"{AppEnvironment.Name} version {AppEnvironment.Version}");
 #if DEBUG
             Console.WriteLine("Is DEBUG");
 #else
@@ -22,13 +23,15 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks
 
             try
             {
-                var webHost = new WebHostBuilder()
+                var hostBuilder = new WebHostBuilder()
                     .UseKestrel()
                     .UseUrls("http://*:5000")
                     .UseContentRoot(Directory.GetCurrentDirectory())
-                    .UseStartup<Startup>()
-                    .UseApplicationInsights()
-                    .Build();
+                    .UseStartup<Startup>();
+#if !DEBUG
+                hostBuilder = hostBuilder.UseApplicationInsights();
+#endif
+                var webHost = hostBuilder.Build();
 
                 await webHost.RunAsync();
             }
