@@ -3,7 +3,6 @@ using System.IO;
 using System.Threading.Tasks;
 using Lykke.Common;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.PlatformAbstractions;
 
 namespace Lykke.Job.BlobToBlobConverter.Candlesticks
 {

@@ -41,7 +41,10 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
 
         public async Task<bool> TryProcessMessageAsync(byte[] data)
         {
-            var result = MessagePackDeserializer.TryDeserialize(data, out CandlesUpdatedEvent candlesEvent);
+            var result = MessagePackDeserializer.TryDeserialize(
+                data,
+                _log,
+                out CandlesUpdatedEvent candlesEvent);
             if (!result)
                 return false;
 
