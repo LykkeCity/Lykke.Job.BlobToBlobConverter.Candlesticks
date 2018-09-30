@@ -13,7 +13,7 @@ using Lykke.Job.BlobToBlobConverter.Candlesticks.Core.Domain.OutputModels;
 namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
 {
     [UsedImplicitly]
-    public class MessageProcessor : IMessageProcessor
+    public class MessageProcessor : IMessageProcessor, IMessageTypeResolver
     {
         private const int _maxStringFieldsLength = 255;
         private const int _maxBatchCount = 500000;
@@ -28,6 +28,11 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
             _log = log;
         }
 
+        public Task<Type> ResolveMessageTypeAsync()
+        {
+            return Task.FromResult(typeof(CandlesUpdatedEvent));
+        }
+
         public void StartBlobProcessing(Func<string, List<string>, Task> messagesHandler)
         {
             _candlesDict = new Dictionary<string, Dictionary<DateTime, OutCandlestick>>();
@@ -39,24 +44,17 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
             await SaveAndClearCandlesAsync(true);
         }
 
-        public async Task<bool> TryProcessMessageAsync(byte[] data)
+        public async Task ProcessMessageAsync(object obj)
         {
-            var result = MessagePackDeserializer.TryDeserialize(
-                data,
-                _log,
-                out CandlesUpdatedEvent candlesEvent);
-            if (!result)
-                return false;
+            var candlesEvent = obj as CandlesUpdatedEvent;
 
             if (!IsValid(candlesEvent))
-                _log.WriteWarning(nameof(TryProcessMessageAsync), nameof(Convert), $"CandleEvent {candlesEvent.ToJson()} is invalid!");
+                _log.WriteWarning(nameof(ProcessMessageAsync), nameof(Convert), $"CandleEvent {candlesEvent.ToJson()} is invalid!");
 
             ProcessCandles(candlesEvent);
 
             if (_candlesDict.Sum(i => i.Value.Count) >= _maxBatchCount)
                 await SaveAndClearCandlesAsync(false);
-
-            return true;
         }
 
         private async Task SaveAndClearCandlesAsync(bool saveAll)

@@ -56,6 +56,7 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Modules
 
             builder.RegisterType<MessageProcessor>()
                 .As<IMessageProcessor>()
+                .As<IMessageTypeResolver>()
                 .SingleInstance();
 
             builder.RegisterType<StructureBuilder>()
