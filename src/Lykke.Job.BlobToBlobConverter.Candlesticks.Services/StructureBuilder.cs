@@ -27,7 +27,7 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Services
                     {
                         TableName = "Candlesticks",
                         AzureBlobFolder = MainContainer,
-                        Colums = OutCandlestick.GetStructure()
+                        Columns = OutCandlestick.GetStructure()
                             .Select(p => new ColumnInfo{ ColumnName = p.Item1, ColumnType = p.Item2 })
                             .ToList(),
                     }
