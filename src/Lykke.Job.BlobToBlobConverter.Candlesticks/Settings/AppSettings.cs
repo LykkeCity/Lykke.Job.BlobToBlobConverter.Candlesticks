@@ -40,6 +40,9 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Settings
 
         public string InputContainer { get; set; }
 
+        [Optional]
+        public bool SkipCorrupted { get; set; }
+
         [AzureBlobCheck]
         public string OutputBlobConnString { get; set; }
 

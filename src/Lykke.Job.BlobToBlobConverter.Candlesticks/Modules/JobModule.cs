@@ -46,7 +46,8 @@ namespace Lykke.Job.BlobToBlobConverter.Candlesticks.Modules
                 .As<IBlobReader>()
                 .SingleInstance()
                 .WithParameter("container", _settings.InputContainer)
-                .WithParameter("blobConnectionString", _settings.InputBlobConnString);
+                .WithParameter("blobConnectionString", _settings.InputBlobConnString)
+                .WithParameter("skipCorrupted", _settings.SkipCorrupted);
 
             builder.RegisterType<BlobSaver>()
                 .As<IBlobSaver>()
